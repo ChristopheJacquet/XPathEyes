@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<Animal>
+    <Reptile>
+        <Snake />
+        <Lizard legs="4" />
+    </Reptile>
+    <Bird legs="2" flying="oui">
+        <Canary />
+        <Pigeon />
+        <Eagle />
+    </Bird>
+    
+    <Mammal>
+        <Primate>
+            <Man legs="2" />
+            <Chimpanzee legs="4" />
+        </Primate>
+        <Bat flying="oui" legs="2" />
+    </Mammal>
+</Animal>

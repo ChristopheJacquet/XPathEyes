@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>XPath Evaluator</title>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+		<style type="text/css">
+			body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+				font-family: "Trebuchet MS", sans-serif;
+			}
+			
+			#left {
+				display: block;
+		  	position: absolute;
+		  	width: 75%;
+		  	height: auto;
+		  	margin: 10px;
+		  	padding: 0px;
+		  	border: 1px dashed #000;
+		  	border-radius: 10px;
+		  	top: 0;
+		  	left: 0;
+		  	bottom: 0;
+		  }
+		  
+		  .droppable {
+		  	background-color: #FFA;
+		  }
+		  
+		  #right {
+		  	left: 77.5%;
+		  	width: 20%;
+		  	height: 100%;
+		  	position: fixed;
+		  	margin: 10px;
+		  	padding: 0px;
+		  }
+		  
+		  #tabbar {
+		  	background-color: #AFA;
+		  	border-bottom: 1px dashed #000;
+		  	border-top-left-radius: 10px;
+		  	border-top-right-radius: 10px;
+		  	padding: 3px;
+		  	text-align: center;
+		  }
+		  
+		  #tabbar a {
+		  	color: black;
+			}
+			
+			#tab-text {
+				margin-right: 2em;
+			}
+			
+			#tab-text:target, #tab-tree:target {
+			  outline: 3px solid #0A0;
+			}
+			
+			#leftdoc {
+   	  	overflow: auto;
+   	  	height: 50%;
+        margin: 0;
+			}
+		  
+		  #xmldoc {
+		  	font-family: "consolas", monospace;
+		  	padding: 10px;
+		  	margin: 10px;
+		  }
+		  
+		  #xmldoc span {
+		  	margin: 1px 0;
+		  	padding: 2px 0;
+		  }
+		  
+		  #xmldoc .hierarchicalContents {
+		  	padding-left: 20px;
+		  }
+		  
+		  #xmldoc .tag {
+		  }
+		  
+		  #xmldoc .tagName {
+		  	color: #A07;
+		  }
+		  
+		  #xmldoc .attrName {
+		  	color: #A52;
+		  }
+		  
+		  #xmldoc .attrValue {
+		  	color: #22A;
+		  }
+		  
+		  #xmldoc .text {
+		  	color: #22A;
+		  }
+		  
+		  #xmldoc .comment {
+		  	color: #2B2;
+		  	font-style: italic;
+		  }
+		  
+		  #xmldoc .highlight {
+		  	background-color: #FFA;
+		  	border: 1px solid #CA8;
+		  	border-radius: 2px;
+		  }
+		  
+		  #xmldoc .gElementBorder {
+		  	stroke: #000;
+		  	stroke-width: 1;
+		  	fill: none;
+		  }
+		  
+		  #xmldoc .gElement {
+		  	fill: #FFF;
+		  }
+		  
+		  #xmldoc .gElementText, #xmldoc .gTextText, #xmldoc .gAttrText, #xmldoc .gCommentText {
+		  	font-size: 16px;
+		  	font-family: "Consolas", monospace;
+		  	text-anchor: middle;
+		  	dominant-baseline: middle;
+		  }
+
+		  #xmldoc .gElementText {		  
+		  	fill: #A07;
+		  }
+		  
+		  #xmldoc .gHierarchyLine {
+		  	stroke: #555;
+		  	stroke-width: 1;
+		  }
+		  
+		  #xmldoc .gText, #xmldoc .gAttr, #xmldoc .gComment {
+		  	stroke: none;
+		  	fill: none;
+		  }
+		  
+		  #xmldoc .gTextText {
+		  	fill: #22A;
+		  }
+		  
+		  #xmldoc .gAttrText {
+		  	fill: #A52;
+		  	font-size: 14px;
+		  }
+		  
+		  #xmldoc .gCommentText {
+		  	fill: #2B2;
+		  	font-style: italic;
+		  }
+
+		  #xmldoc .gHighlight {
+		  	fill: #FFA !important;
+		  }
+		  
+		  #queryBox {
+		  	width: 100%;
+		  }
+		  
+		  #resultText {
+		  	margin-top: 1.5em;
+		  }
+		  
+		  #queryText {
+		    padding-bottom: 1em;
+		    display: block;
+		  }
+		  
+		  #result {
+		  	margin-top: .5em;
+		  }
+		</style>
+		<script type="text/javascript">
+		// <![CDATA[
+		
+		var doc;
+		var xpath = null;
+		var textual = true;
+		var zoomRate = 1.1;
+		var figW = 0, figH = 0, figX = 0, figY = 0;
+		
+		function setZoom() {
+		  var elt = document.getElementById("figure");
+		  if(elt) {
+		    //elt.setAttribute("viewBox", [figX, figY, figW, figH].join(" "));
+		    elt.setAttribute("width", figW);
+		    elt.setAttribute("height", figH);
+		  }
+		}
+		
+		function urlParams() {
+			var t = location.search.substring(1).split('&');
+			var params = [];
+	
+			for (var i=0; i<t.length; i++) {
+				var x = t[i].split('=');
+				params[x[0]]=x[1];
+			}
+	
+			return params;
+		}
+		
+		function createSvgRect(rows, rectClass) {
+			var eleW = rows[0].text.length * 10;
+			for(var i=1; i<rows.length; i++) {
+				if(rows[i].text.length * 9 > eleW) eleW = rows[i].text.length * 9;
+			}
+		
+			var eleHUnit = 24;
+			var eleH = eleHUnit * rows.length;
+			
+			//console.log("maxLen=" + maxLen + ", eleW=" + eleW);
+		
+			svg = "";
+			for(var i=0; i<rows.length; i++) {
+				svg += "<rect x='-" + (eleW/2) + "' y='" + (i*eleHUnit) + "' width='" + eleW + "' height='" + eleHUnit + "' class='" + rows[i].rectClass + "' /><text x='0' y='" + (i*eleHUnit+eleHUnit/2) + "' class='" + rows[i].textClass + "'>" + rows[i].text + '</text>'
+			}
+			
+			svg += "<rect x='-" + (eleW/2) + "' y='0' width='" + eleW + "' height='" + eleH + "' class='" + rectClass + "' />";
+			
+			if(rows.length > 1) {
+				svg += "<line x1='-" + (eleW/2) + "' y1='" + eleHUnit + "' x2='" + (eleW/2) + "' y2='" + eleHUnit + "' class='" +rectClass + "' />";
+			}
+			
+			return {
+				xmin: -eleW/2,
+				width: eleW,
+				height: eleH,
+				svg: svg,
+			};
+		}
+		
+		function xml2svg(node, highlight) {
+			var res = {
+				svg: "<circle cx='0' cy='15' r='15' fill='red' />",
+				xmin: -15,
+				width: 30,
+				height: 30
+			};
+
+			var hSpace = 20, vSpace = 40;
+			var hl = highlight.indexOf(node)>-1 ? " gHighlight" : "";
+			switch(node.nodeType) {
+				case Node.ELEMENT_NODE:
+				var rows = [{text: node.nodeName, rectClass: "gElement"+hl, textClass: "gElementText"}];
+				for(var i=0; i<node.attributes.length; i++) {
+					rows.push({
+						text: node.attributes[i].nodeName + '="' + node.attributes[i].nodeValue + '"',
+						rectClass: "gAttr" + (highlight.indexOf(node.attributes[i])>-1 ? " gHighlight" : ""),
+						textClass: "gAttrText",
+					});
+				}
+				
+				res = createSvgRect(rows, "gElementBorder");
+				
+				var w = 0;
+				if(node.childNodes.length > 0) {
+					var y0 = res.height;
+					var y = y0 + vSpace;
+					var children = [];
+					for(var i=0; i<node.childNodes.length; i++) {
+						var c = xml2svg(node.childNodes[i], highlight);
+						if(c == null) continue; // strip out empty text nodes
+						if(c.height+y > res.height) res.height = c.height+y;
+						w += c.width;
+						children.push(c);
+					}
+					
+					if(w > res.width) res.width = w;
+					
+					// horizontal spacing:
+					res.width += (children.length - 1) * hSpace;
+					
+					var x = -w/2;
+					
+					if(x < res.xmin) res.xmin = x;
+					
+					for(var i=0; i<children.length; i++) {
+						var eX = x - children[i].xmin;
+						res.svg += "<g transform='translate(" + eX + ", " + y + ")'>" + children[i].svg + "</g>";
+						res.svg += "<line x1='0' y1='" + y0 + "' x2='" + eX + "' y2='" + y + "' class='gHierarchyLine' />";
+						
+						x += children[i].width + hSpace;
+					}
+					
+					//res.svg += "<rect x='" + res.xmin + "' y='0' width='" + res.width + "' height='" + res.height + "' stroke='green' fill='none' />";
+
+				}
+				
+				break;
+				
+				case Node.TEXT_NODE:
+				{
+					var t = $.trim(node.nodeValue);
+					if(t.length > 0) {
+						res = createSvgRect([{text: t, rectClass:"gText"+hl, textClass:"gTextText"}], "gText");
+					} else {
+						res = null;
+					}
+					break;
+				}
+				
+				case Node.COMMENT_NODE:
+				res = createSvgRect([{rectClass: "gComment" + hl, textClass: "gCommentText", text: /* "&lt;!-- " + */ node.nodeValue /* + "--&gt;" */}], "gComment");
+				break;
+				
+			}
+			
+			return res;
+		}
+		
+		function xml2html(node, highlight) {
+			var res = "";
+			var hl = highlight.indexOf(node)>-1 ? " highlight" : "";
+			switch(node.nodeType) {
+				case Node.ELEMENT_NODE:
+				res = "<div class='element'>";
+				res += "<span class='tag" + hl + "'>&lt;" + "<span class='tagName'>" + node.nodeName + "</span>";
+				for(var i=0; i<node.attributes.length; i++) {
+					res += " <span class='attribute" + (highlight.indexOf(node.attributes[i])>-1 ? " highlight" : "") + "'>";
+					res += " <span class='attrName'>" + node.attributes[i].nodeName + '</span>="<span class="attrValue">' + node.attributes[i].nodeValue + '</span>"';
+					res += "</span>";  // attribute
+				}
+				
+				if(node.childNodes.length > 0) {
+					res += "&gt;</span>";
+					for(var i=0; i<node.childNodes.length; i++) {
+						res += "<div class='hierarchicalContents'>";
+						res += xml2html(node.childNodes[i], highlight);
+						res += "</div>";
+					}
+					res += "<span class='tag'>&lt;/<span class='tagName'>" + node.nodeName + "</span>&gt;</span>";
+				} else {
+					res += " /&gt;</span>";
+				}
+				res += "</div>"; // element
+				break;
+				
+				case Node.TEXT_NODE:
+				{
+					var t = $.trim(node.nodeValue);
+					if(t.length > 0) {
+						res += "<span class='text" + hl + "'>" + t + "</span>";
+					}
+					break;
+				}
+				
+				case Node.COMMENT_NODE:
+				res += "<span class='comment" + hl + "'>&lt;!-- " + node.nodeValue + "--&gt;</span>";
+				break;
+			}
+			
+			return res;
+		}
+	
+	  // adapts height when the window is resized
+		function onresize() {
+  		$("#leftdoc").height($("#left").height() - $("#tabbar").outerHeight());
+		}
+		
+		function displayResult(doc, xpath) {
+			var res;
+			var text;
+			var highlight = [];
+			
+			if(xpath == null) {
+				text = "";
+			} else {
+				try {
+					res = doc.evaluate(xpath, doc, null, XPathResult.ANY_TYPE, null);
+					console.log(res);
+					
+					switch(res.resultType) {
+						case XPathResult.NUMBER_TYPE:
+						text = res.numberValue;
+						break;
+						
+						case XPathResult.STRING_TYPE:
+						text = res.stringValue;
+						break;
+					
+						case XPathResult.BOOLEAN_TYPE:
+						text = res.booleanValue ? "true" : "false";
+						break;
+		
+						case XPathResult.UNORDERED_NODE_ITERATOR_TYPE:
+						case XPathResult.ORDERED_NODE_ITERATOR_TYPE:
+						{
+							var n;
+							while((n = res.iterateNext()) != null) {
+								//console.log(n);
+								highlight.push(n);
+							}
+							
+							text = "Set of " + highlight.length + " nodes (highlighted)";
+							
+							console.log(highlight);
+							break;
+						}
+					}
+					
+				} catch(e) {
+					console.error(e);
+					text = e.message;
+				}
+			}
+			
+			$("#result").html(text);
+			
+			if(textual) {
+				var html = xml2html(doc.documentElement, highlight);
+				console.log(html);
+				$("#xmldoc").html(html);
+				window.location.hash = "tab-text";
+			} else {
+				var svg = xml2svg(doc.documentElement, highlight);
+				console.log(svg);
+				figX = svg.xmin;
+				figY = -1;
+				figW = svg.width;
+				figH = svg.height;
+				$("#xmldoc").html("<svg id='figure' viewBox='" + [figX, figY, figW+2, figH+2].join(" ") + "'>" /*"'   preserveAspectRatio='xMaxYMin'>"*/ + svg.svg + "</svg>");
+				setZoom();
+				// width='" + svg.width + "'
+				// height='" + svg.height + "'
+				window.location.hash = "tab-tree";
+			}
+			
+			$(window).resize(onresize);
+			onresize();
+		}
+		
+		
+		function onMouseWheel(event) {
+		  //console.warn(event.originalEvent);
+		  
+		  // shift is needed to zoom
+		  if(! event.shiftKey) return;
+		  
+		  var mult = 1;
+		  
+		  if(event.originalEvent.wheelDelta) {
+		    mult = event.originalEvent.wheelDelta > 0 ? zoomRate : 1/zoomRate;
+		  }
+		  
+		  if(event.originalEvent.detail) {
+		    mult = event.originalEvent.detail < 0 ? zoomRate : 1/zoomRate;
+		  }
+		  
+		  figW *= mult;
+		  figH *= mult;
+		  
+		  setZoom();
+		  
+		  return false;
+		}
+		
+		
+		$(function() {
+			var params = urlParams();
+
+			var file = params["file"];
+			
+			if(file == undefined) {
+				//alert("No file loaded");
+			} else
+
+			$("#queryForm").submit(function() {
+				xpath = $("#queryBox").val();
+				console.log("submit: " + xpath);
+				displayResult(doc, xpath);
+				
+				return false;
+			});
+			
+			$("#tab-text").click(function() {
+				textual = true;
+				displayResult(doc, xpath);
+				return false;
+			});
+			
+			$("#tab-tree").click(function() {
+				textual = false;
+				displayResult(doc, xpath);
+				return false;
+			});
+			
+			$("#left").bind("dragover", function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+				$("#left").addClass("droppable");
+			});
+
+			$("#left").bind("dragleave", function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+				$("#left").removeClass("droppable");
+			});
+			
+			$("#left").bind("drop", function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        
+				$("#left").removeClass("droppable");
+
+				console.log(e);
+				
+				var dt = e.originalEvent.dataTransfer;
+				var files = dt.files;
+	
+				console.log(files);
+				
+				if(files.length != 1) {
+					alert("Please drop exactly one file.");
+				} else {
+					var file = files[0];
+
+					var reader = new FileReader();  
+					reader.onload = function(evt) {
+						//console.log(evt.target);
+						var contents = evt.target.result;
+						console.log(contents);
+						doc = $.parseXML(contents);
+						displayResult(doc, null);
+						
+					};
+					
+					reader.readAsText(file);
+
+				}
+				
+				return false;
+			});
+			
+			$("body").bind('mousewheel', onMouseWheel);
+			$("body").bind('DOMMouseScroll', onMouseWheel);
+
+			
+			$.get(file, function(docu, status) {
+				//console.log(status);
+				console.log(docu);
+				doc = docu;
+				
+				displayResult(doc, null);
+
+			}, "xml");
+		});
+		// ]]>
+		</script>
+	</head>
+	<body>
+		<div id="left">
+		  <div id="tabbar">
+		  	<a href="#" id="tab-text">Textual XML</a>
+		  	<a href="#" id="tab-tree">Tree</a>
+		  </div>
+		  <div id="leftdoc">
+  		  <div id="xmldoc"></div>
+  		</div>
+		</div>
+
+		<div id="right">
+			<div id="query">
+				<form id="queryForm">
+				  <label id="queryText">Enter an XPath expression here:</label>
+					<input type="text" id="queryBox" autofocus>
+				</form>
+				<div id="resultText">Result:</div>
+				<div id="result">
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
