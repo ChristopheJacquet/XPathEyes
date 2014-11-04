@@ -2,7 +2,7 @@ XPathEyes
 =========
 
 XPathEyes is an XPath expression evaluator for the web, with graphical XML tree rendering.
-**[Try it online](http://htmlpreview.github.io/?https://github.com/ChristopheJacquet/XPathEyes/blob/master/XPathEyes.html)**.
+**[Try it online](https://cdn.rawgit.com/ChristopheJacquet/XPathEyes/master/XPathEyes.html?file=examples/animals.xml#tab-tree)**.
 
 ## Opening a file
 
