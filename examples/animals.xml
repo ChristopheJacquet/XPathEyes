@@ -5,7 +5,7 @@
         <Snake />
         <Lizard legs="4" />
     </Reptile>
-    <Bird legs="2" flying="oui">
+    <Bird legs="2" flying="yes">
         <Canary />
         <Pigeon />
         <Eagle />
@@ -16,6 +16,6 @@
             <Man legs="2" />
             <Chimpanzee legs="4" />
         </Primate>
-        <Bat flying="oui" legs="2" />
+        <Bat flying="yes" legs="2" />
     </Mammal>
 </Animal>
